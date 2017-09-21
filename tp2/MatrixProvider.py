@@ -59,6 +59,11 @@ class MatrixProvider:
             nombre es el nombre de la matriz (ej: P05.mat)
             path es la ruta para abrir el archivo (ej: dataset/P05.mat)
             tipo es el tipo del sujeto. Tiene valor 'P' o 'S'
+
+        Parámetros:
+            n Cantidad de sujetos a usar
+            balaneado Si los sujetos deben estar balanceados entre P y S
+            unico Si vale P o S, solo usa sujetos de ese tipo
         """
         self.n = n if n > 0 else len(self.all_matrices)
         self.balanceado = balanceado
