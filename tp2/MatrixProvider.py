@@ -45,7 +45,7 @@ class MatrixProvider:
     }  
 
 
-    def __init__(self, n=6, balanceado=True, unico=None):
+    def __init__(self, n=6, balanceado=True, unico=None, mats=None):
         """
         Crea un proveedor que devuelve 'n' directorios de matrices.
 
@@ -64,22 +64,30 @@ class MatrixProvider:
             n Cantidad de sujetos a usar
             balaneado Si los sujetos deben estar balanceados entre P y S
             unico Si vale P o S, solo usa sujetos de ese tipo
+            mats Lista fija de archivos a usar 
         """
         self.n = n if n > 0 else len(self.all_matrices)
-        self.balanceado = balanceado
-        self.unico = unico
-       
-        if unico is None:
-            if self.balanceado:
-                half = n // 2
-                pool = random.sample(self.MATRICES['P'], half)
-                pool.extend(random.sample(self.MATRICES['S'], n - half))
-            else:
-                pool = random.sample(MATRICES['P'] + MATRICES['S'], n)
+        if mats is not None:
+            self.pool = []
+            for m in mats:
+                name = os.path.basename(m)
+                tipo = name[0]
+                self.pool.append(self.MatrixData(name, m, tipo))
         else:
-            pool = random.sample(MATRICES[unico], n)
+            self.balanceado = balanceado
+            self.unico = unico
+           
+            if unico is None:
+                if self.balanceado:
+                    half = n // 2
+                    pool = random.sample(self.MATRICES['P'], half)
+                    pool.extend(random.sample(self.MATRICES['S'], n - half))
+                else:
+                    pool = random.sample(MATRICES['P'] + MATRICES['S'], n)
+            else:
+                pool = random.sample(MATRICES[unico], n)
     
-        self.pool = pool
+            self.pool = pool
         
         self.pbar = FloatProgress(min=0, max=self.n)
         display(self.pbar)
@@ -94,8 +102,9 @@ class MatrixProvider:
         self.pbar.value += 1
         try:
             next_val = self.iter.next()
+            idx = self.idx
             self.idx += 1
-            return (self.idx, next_val[0], next_val[1], next_val[2])
+            return (idx, next_val[0], next_val[1], next_val[2])
         except StopIteration as si:
             self.stoptime = time.time()
             print('Tiempo total: {:.2f}s'.format(self.stoptime -
