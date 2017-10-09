@@ -3,6 +3,7 @@ from __future__ import print_function, unicode_literals, division
 from numpy import *
 from sklearn.metrics import mutual_info_score
 from sklearn.metrics import normalized_mutual_info_score
+import multiprocessing
 import scipy.io as sio
 import glob
 import numpy as np
@@ -60,7 +61,7 @@ def informacion_mutua_epoch(electrodo_samples):
             
     return mutual_info_score(us, vs)
 
-def informacion_mutua_sujeto(subject_matrix):
+def informacion_mutua_sujeto(subject_name, subject_matrix):
     """
     Calcula métricas de información inter-electrodo para el sujeto.
 
@@ -73,13 +74,14 @@ def informacion_mutua_sujeto(subject_matrix):
 
     Returns:
         tupla con
-            * nombre del sujeto
+            * nombre del sujeto - Solo para debug
             * promedio de la información mutua inter-electrodo
             * desvío standard de la información mutua inter-electrodo
     """
     epochs_info = []
-    for epoch in list(range(subject_matrix.shape[0]))[:3]:
-        logger.debug('>    Epoch: {}'.format(epoch))
+    for epoch in range(subject_matrix.shape[0]):
+        logger.debug('> Subject: {} | Epoch: {}'.format(subject_name,
+                                                        epoch))
         epochs_info.append(informacion_mutua_epoch(
             subject_matrix[epoch, :, :]))
     return (np.mean(epochs_info), np.std(epochs_info))
@@ -94,11 +96,24 @@ if __name__ == '__main__':
                         for n in matrix_files]  # P01.mat ...
     logger.debug('Subject files loaded')
 
-    subject_metrics = []
-    for mf, name in list(zip(matrix_files, matrix_names)):
-        logger.debug('> Subject: {}'.format(name))
-        subject_metrics.append(
-            informacion_mutua_sujeto(sio.loadmat(mf)['data']))
+    def apply_informacion_mutua(args):
+        """
+        Función para paralelizar el aplicar información mutua 
+
+        Args:
+            args tupla de dos parametros:
+                nombre del sujeto - solo se usa para imprimir en le log
+                nombre de la matriz - para abrirla y computar la métrica
+
+        Returns:
+            resultado de informacion_mutua_sujeto
+        """
+        name, mf = args
+        return informacion_mutua_sujeto(name, sio.loadmat(mf)['data'])
+
+    p = multiprocessing.Pool()
+    subject_metrics = p.map(apply_informacion_mutua, zip(matrix_names,
+                                                         matrix_files))
 
     fd = pd.DataFrame.from_records(subject_metrics, index=matrix_names,
                                    columns=['mean', 'std'])
